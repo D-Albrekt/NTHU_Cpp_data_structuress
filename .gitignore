@@ -30,4 +30,11 @@
 *.exe
 *.out
 *.app
+
+# Word files
 *.docx
+
+# Draw.io files
+*.drawio
+# vscode Specs
+.vscode

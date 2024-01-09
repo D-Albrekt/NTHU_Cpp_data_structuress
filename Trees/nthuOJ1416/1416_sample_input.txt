@@ -1,0 +1,14 @@
+Insert 5
+Size 5
+Insert 2
+Size 5
+Insert 9
+Insert 6
+Insert 9
+Size 5
+Size 9
+Size 10
+Insert 3
+Insert 1
+Insert 4
+Size 2
