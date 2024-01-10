@@ -8,6 +8,11 @@
 #include <string>
 #include <queue>
 
+#include <sys/times.h>
+#include <unistd.h>
+#include <cstdio>
+
+
 void graph_input(Graph& G) {
 	int vertex_num, edge_num;
 	cin >> vertex_num >> edge_num;
@@ -77,14 +82,24 @@ int main(void) {
 
 	Problem2 P2(G);
 
+	struct tms  tmsstart, tmsend;
+    clock_t     start, end;
+    static long     clktck = 0;
+    clktck = sysconf(_SC_CLK_TCK);
+    start = times(&tmsstart);
+	
 	string input_string;
+	int i{0};
 	while (getline(cin, input_string)) {
+		std::cout << i++ << ' ' << input_string << endl;
 		if (input_string[0] == 'i') {
+			std::cout << "insert" << endl;
 			int id, s, t;
 			Set D;
             bool take;
 			insert_input(id, s, t, D, input_string);
 			take = P2.insert(id, s, D, t, G, T);
+			
 			if (take)
 			{
 				std::cout << "Success" << std::endl;
@@ -92,18 +107,27 @@ int main(void) {
 			else{
 				std::cout << "Fail" << std::endl;
 			}
-			print_graph(G);
+			
 
 		}
 		else if (input_string[0] == 's') {
+			std::cout << "stop" << endl;
 			int id = stop_input(input_string);
 			P2.stop(id, G, F);
 
 		}
 		else if (input_string[0] == 'r') {
+			
+			std::cout << "rearrange" << endl;
 			P2.rearrange(G, F);
-
 		}
 	}
+	end = times(&tmsend);
+
+    printf(" real:  %7.7f\n", (end-start) / (double) clktck);
+    printf(" user:  %7.7f\n",
+            (tmsend.tms_utime - tmsstart.tms_utime) / (double) clktck);
+    printf(" sys:   %7.7f\n",
+            (tmsend.tms_stime - tmsstart.tms_stime) / (double) clktck);
 	return 0;
 }

@@ -1,6 +1,10 @@
 #include "basicDS.h"
-#include <array>
+#include <map>
+#include <set>
 #include <algorithm>
+#include <limits.h>
+#include <vector>
+#include<bits/stdc++.h>
 #define Max_Calls 100000
 /* You can add more functions or variables in each class. 
    But you "Shall Not" delete any functions or variables that TAs defined. */
@@ -13,6 +17,7 @@ void print_graph(Graph const& G)
 		std::cout << gE.vertex[0] << '-' << gE.vertex[1] << ", " << gE.b << ", " << gE.be << ", " << gE.ce << std::endl;
 	}
 }
+bool GFG_DFS(vector<graphEdge*>  const& tree, int from, int to);
 
 class Problem2 {
 public:
@@ -23,16 +28,8 @@ public:
 	void stop(int id, Graph &G, Forest &MTidForest);
 	void rearrange(Graph &G, Forest &MTidForest);
 private:
-	//Helper functions
-	Graph constrained_graph(Graph const& g, int t, Set D);
-	int min_cost(int cost[], bool included[], int size);
-	void update_edge_cost(Graph const& reduced_graph, bool included[], int cost[], int parent[],  int curr);
-	bool prims_algo(Graph const& reduced_graph, Tree& m_tree); //creates minimal spanning tree.
-	void update_graph(Graph &G,Tree & m_tree, int t);
-	void update_w_trees(Graph &G, Forest &F);
-
-	
 	//Datamembers
+	Graph g_sorted_edges;
 	Forest active_trees;
 	struct MC_request{
 		int id;
@@ -42,13 +39,29 @@ private:
 		bool waiting; // if true then request is waiting.
 		bool active;
 	};
-	std::array<MC_request*, Max_Calls> MC_requests;
+	std::map<int, MC_request*> MC_requests;
+	struct Graph_Ext : Graph
+	{
+		vector<graphEdge*> parent_edges;
+	};
+	
+	//Helper functions
+	Graph constrained_graph(Graph & og_g, Graph_Ext & g, int t, Set D);
+	bool kruskals_algo(Graph_Ext& reduced_graph, Tree& m_tree); //creates minimal spanning tree.
+	void update_graph(Graph &G,Tree & m_tree, int t);
+	void update_w_trees(Graph &G, Forest &F);
+	bool is_cycle(vector<graphEdge*> const& tree, int from, int to);
+
+
+	
+
 
 };
 
-Problem2::Problem2(Graph G) : active_trees{}, MC_requests{} {
-	/* Write your code here. */
-	
+Problem2::Problem2(Graph G) : active_trees{}, MC_requests{}, g_sorted_edges{G} {
+	std::sort(begin(g_sorted_edges.E), end(g_sorted_edges.E), [](graphEdge const&lhs, graphEdge const&rhs){
+		return lhs.ce < rhs.ce;
+	});
 }
 
 Problem2::~Problem2() {
@@ -57,107 +70,121 @@ Problem2::~Problem2() {
 }
 
 
-Graph Problem2::constrained_graph(Graph const& og_g, int t, Set D)
+Graph Problem2::constrained_graph(Graph& og_g, Graph_Ext& g, int t, Set D)
 {
-	Graph g;
 	for (int v: og_g.V) {
 		if (std::find(std::begin(D.destinationVertices),std::end(D.destinationVertices), v) != (std::end(D.destinationVertices)))
 		{
 			g.V.push_back(v);
 		}
 	}
-	for (graphEdge e: og_g.E)
+	for (graphEdge& e: og_g.E)
 	{
 		if(e.b >= t)
 		{
 			if (std::find(std::begin(D.destinationVertices),std::end(D.destinationVertices), e.vertex[0]) != std::end(D.destinationVertices) && 
 			(std::find(std::begin(D.destinationVertices),std::end(D.destinationVertices), e.vertex[1]) != std::end(D.destinationVertices)))
 			{
-							g.E.push_back(e);
+							g.parent_edges.push_back(&e);
 			}
 		}
 	} 
-	return g;
+	return (g);
 }
-int Problem2::min_cost(int cost[], bool included[], int size){
-	int min_value = INT_MAX;
-	int min_index;
- 
-    for (int v = 0; v < size; v++)
-        if (included[v] == false && cost[v] < min_value)
-        {
-			min_value = cost[v];
-			min_index = v;
-		} 
-    return min_index;
-}
-void Problem2::update_edge_cost(Graph const& reduced_graph, bool included[], int cost[], int parent[], int curr)
-{
-	for (graphEdge e: reduced_graph.E)
-	{
-		if((e.vertex[0] == (curr + 1) && included[e.vertex[1] - 1]== false && e.ce < cost[e.vertex[1] - 1])) //If edge is v - u
-		{
-			parent[e.vertex[1] - 1] = curr;
-			cost[e.vertex[1] - 1] = e.ce;
-		}
-		else if((e.vertex[1] == (curr + 1) && included[e.vertex[0] - 1] == false && e.ce < cost[e.vertex[0] - 1])) //If edge is u - v
-		{
-			parent[e.vertex[0] - 1] = curr;
-			cost[e.vertex[0] - 1] = e.ce;
-		}
-	}
-}
-bool Problem2::prims_algo(Graph const& reduced_graph, Tree& m_tree)
-{
-	int source{m_tree.s - 1};
-	int V = reduced_graph.V.size();
-	bool included[V]; //An array with all included elements. 
-	std::fill(included, included + V, false); //Nothing included from start
-	int cost[V]; //The cost to reach each vertex
-	std::fill(cost, cost + V, INT_MAX); //Init cost is infinite.
-	int parent[V];
-	parent[source] = -1;
-	cost[source] = 0; //Cost to itself is zero, so this node is always chosen first.
-	//Create parent & set init values. Determine what index to worked with.
 
-	for (int edges = 0; edges < (V - 1); edges++)//Needs V-1 edges to connect V vertices.
+bool Problem2::is_cycle(vector<graphEdge*> const& tree, int from, int to)
+{
+	GFG_DFS(tree, from, to);
+	return true;
+}
+
+
+bool Problem2::kruskals_algo(Graph_Ext& reduced_graph, Tree& m_tree)
+{
+	/* 
+	Needs to be reimplemented, 
+	Now the source node is fucking it.
+	Maybe faster way to solve it? 
+	Kruskals?
+	
+	*/
+
+	int V = reduced_graph.V.size();
+	vector<graphEdge*> selected_edges{};
+	std::vector<graphEdge*>::iterator it = std::begin(reduced_graph.parent_edges);
+	std::set<int> included_vertices{};
+	for (graphEdge* gE : reduced_graph.parent_edges)
 	{
-		int u = min_cost(cost, included, V); //min cost return index with mincost
-		std::cout << "u is: " << u << std::endl;
-		if (u < -1 || u > 100) {return false;} 
-		included[u] = true; //  include min cost.
-		update_edge_cost(reduced_graph, included, cost, parent, u);
+		std::cout << " reduced edges "<<  gE->vertex[0] << '-' << gE->vertex[1] << std::endl;
 	}
-	for(int vertex = 0; vertex < V; vertex++)
+	int i = 0;
+	while ((selected_edges.size() < V-1) && (it != std::end(reduced_graph.parent_edges)))
 	{
-		if(cost[vertex] > 100)
+		graphEdge curr = *(*it);
+		bool v_from{included_vertices.contains(curr.vertex[0])};
+		bool v_to{included_vertices.contains(curr.vertex[1])};
+
+		if (!v_from && !v_to)// && curr.vertex[1])
+		{			
+			selected_edges.push_back(*it);
+			m_tree.E.push_back(treeEdge{curr.vertex[0], curr.vertex[1]});
+			included_vertices.insert(curr.vertex[0]);
+			included_vertices.insert(curr.vertex[1]);
+			(*it)->b = (*it)->b - MC_requests[m_tree.id]->t;
+		}else if(v_from && !v_to)
 		{
-			return false;
-		}
-	}
-	for (int vertex = 0; vertex < V; vertex++)
-	{
-		if (parent[vertex] != -1 && !(parent[vertex] < -1 || parent[vertex] > 100))
+			selected_edges.push_back(*it);
+			m_tree.E.push_back(treeEdge{curr.vertex[0], curr.vertex[1]});
+			included_vertices.insert(curr.vertex[1]);
+			(*it)->b = (*it)->b - MC_requests[m_tree.id]->t;
+		}else if(!v_from && v_to)
 		{
-			m_tree.V.push_back(vertex);
-			if (vertex > parent[vertex])
+			selected_edges.push_back(*it);
+			m_tree.E.push_back(treeEdge{curr.vertex[0], curr.vertex[1]});
+			included_vertices.insert(curr.vertex[0]);
+			(*it)->b = (*it)->b - MC_requests[m_tree.id]->t;
+		}else{
+			if (!is_cycle(selected_edges, curr.vertex[0], curr.vertex[1]))
 			{
-				m_tree.E.push_back(treeEdge{parent[vertex], vertex});
-			}else{
-				m_tree.E.push_back(treeEdge{vertex, parent[vertex]});
+				selected_edges.push_back(*it);
+				m_tree.E.push_back(treeEdge{curr.vertex[0], curr.vertex[1]});
+				(*it)->b = (*it)->b - MC_requests[m_tree.id]->t;
+
 			}
 		}
+		it++;
+		
+
 	}
+	std::cout << "Selected edges, size then edges : " << m_tree.E.size() << std::endl;
+	for (graphEdge* gE : selected_edges)
+	{
+		std::cout << gE->vertex[0] << '-' << gE->vertex[1] << std::endl;
+	}
+	std::cout << "---------------------------------------------------" << std::endl;
+
+	if(m_tree.E.size() < (V - 1))
+	{
+		for (graphEdge* gE : selected_edges)
+		{
+			gE->b = gE->b + MC_requests[m_tree.id]->t;
+		}
+		m_tree.E.clear();
+		std::cout << "pop" << std::endl;
+		print_graph(g_sorted_edges);
+		return false;
+	}
+	print_graph(g_sorted_edges);
 	return true;
 }
 void Problem2::update_graph(Graph &G,Tree& m_tree, int t)
 {		
-	for (treeEdge mt : m_tree.E)
+	for (treeEdge const& mt : m_tree.E)
 	{	
 		for(graphEdge& gE: G.E)
 		{
-			if ((gE.vertex[0] == mt.vertex[0] + 1 && gE.vertex[1] == mt.vertex[1] + 1)
-			|| (gE.vertex[1] == mt.vertex[0] + 1 && gE.vertex[0] == mt.vertex[1] + 1))
+			if ((gE.vertex[0] == mt.vertex[0] && gE.vertex[1] == mt.vertex[1])
+			|| (gE.vertex[1] == mt.vertex[0] && gE.vertex[0] == mt.vertex[1]))
 			{
 				gE.b = gE.b - t;
 				m_tree.ct = m_tree.ct + (t * gE.ce);
@@ -168,25 +195,27 @@ void Problem2::update_graph(Graph &G,Tree& m_tree, int t)
 
 bool Problem2::insert(int id, int s, Set D, int t, Graph &G, Tree &MTid) {
 	/* Store your output graph and multicast tree into G and MTid */
-	
-	/* Write your code here. */
-	std::cout << "-------------Start of insert-----------------" << std::endl;
 	if(MC_requests[id] == nullptr)
 	{
 		MC_requests[id] = new MC_request{id, s, D, t, true, true}; //Init request as noncomplete
 	} 
 	Tree m_tree{};
 	m_tree.s = s;
-	m_tree.V.push_back(s - 1);
+	m_tree.V.push_back(s);
 	m_tree.id = id;
-
-	Graph reduced_graph = constrained_graph(G, t, D); //creates a graph that only contains the edges with enough bandwith and dest vertices
-	if(prims_algo(reduced_graph, m_tree)) //creates minimal spanning tree.
+	if (std::find(std::begin(D.destinationVertices),std::end(D.destinationVertices), s) == (std::end(D.destinationVertices)))
 	{
-		update_graph(G, m_tree, t); //reduces the bandwith of the used edges.
+		D.destinationVertices.push_back(s);
+	}
+	Graph_Ext reduced_graph;
+	constrained_graph(g_sorted_edges, reduced_graph, t, D); //creates a graph that only contains the edges with enough bandwith and dest vertices
+	if(kruskals_algo(reduced_graph, m_tree)) //creates minimal spanning tree.
+	{
+		//update_graph(G, m_tree, t); //reduces the bandwith of the used edges.
 		MC_requests[id]->waiting = false;
 		active_trees.trees.push_back(m_tree);
 		active_trees.size++;
+		G = g_sorted_edges;
 		return true;
 	}
 	return false; 	/* You should return true or false according the insertion result */
@@ -216,7 +245,6 @@ void Problem2::stop(int id, Graph &G, Forest &MTidForest) {
 	
 	/* Write your code here. */
 
-	std::cout << "------------- Start of Stop ------------------" << std::endl;
 	MC_requests[id]->active = false;
 	Tree curr_tree;
 	if(!MC_requests[id]->waiting)
@@ -244,7 +272,6 @@ void Problem2::rearrange(Graph &G, Forest &MTidForest) {
 
 	/* Write your code here. */
 
-	print_graph(G);
 	for (Tree tree : active_trees.trees)
 	{
 		if(MC_requests[tree.id]->active)
@@ -255,7 +282,6 @@ void Problem2::rearrange(Graph &G, Forest &MTidForest) {
 	}
 	active_trees.trees.clear();
 	active_trees.size = 0;
-	print_graph(G);
 	// Do insert from low to high, skip stopped.
 	for(int i = 0; i < MC_requests.size(); i++)
 	{
@@ -271,4 +297,57 @@ void Problem2::rearrange(Graph &G, Forest &MTidForest) {
 		}
 	}
 	return;
+}
+
+
+
+// A utility function to add an edge in an
+// undirected graph.
+void addEdge(vector<int> adj[], int u, int v)
+{
+    adj[u].push_back(v);
+    adj[v].push_back(u);
+}
+ 
+// A utility function to do DFS of graph
+// recursively from a given vertex u.
+void DFSUtil(int u, vector<int> adj[],
+                    vector<bool> &visited)
+{
+    visited[u] = true;
+    cout << u << " ";
+    for (int i=0; i<adj[u].size(); i++)
+        if (visited[adj[u][i]] == false)
+            DFSUtil(adj[u][i], adj, visited);
+}
+ 
+// This function does DFSUtil() for all 
+// unvisited vertices.
+void DFS(vector<int> adj[], int V)
+{
+    vector<bool> visited(V, false);
+    for (int u=0; u<V; u++)
+        if (visited[u] == false)
+            DFSUtil(u, adj, visited);
+}
+ 
+// Driver code
+bool GFG_DFS(vector<graphEdge*> const& tree, int from , int to) 
+{
+	int max_V = 101;
+	// The below line may not work on all
+    // compilers.  If it does not work on
+    // your compiler, please replace it with
+    // following
+    // vector<int> *adj = new vector<int>[V];
+    std::vector<int> adj[max_V];//Max amount ofvertices
+ 
+    // Vertex numbers should be from 0 to 4.
+	for (graphEdge* gE : tree)
+	{
+		    addEdge(adj, gE->vertex[0], gE->vertex[1]);
+	}
+
+    DFS(adj, max_V);
+	return false;
 }

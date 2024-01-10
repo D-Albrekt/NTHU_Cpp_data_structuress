@@ -37,7 +37,7 @@ void problem2()
     cout << endl; 
     int request_id{1};
     int source{1};
-    for (int i = 10; i < P2_Vertices; i++)
+    for (int i = 10; i < 95000; i++)
     {
         cout << "insert" << ' ' << request_id++ << ' ';
         if (P2_Vertices%i != 0)
@@ -56,6 +56,10 @@ void problem2()
             }
         }
         cout << "} " << "10" << endl; 
+        if (i % 1000 == 0)
+        {
+            cout << "rearrange" << endl;
+        }
     }
 
 }
