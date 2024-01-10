@@ -37,4 +37,5 @@
 # Draw.io files
 *.drawio
 # vscode Specs
-.vscode
+*.vscode
+*.vscode/*
