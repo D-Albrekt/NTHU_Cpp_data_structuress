@@ -1,5 +1,7 @@
 #include "basicDS.h"
-#include <array>
+#include <map>
+#include <vector>
+#include <limits.h>
 
 /* You can add more functions or variables in each class. 
    But you "Shall Not" delete any functions or variables that TAs defined. */
@@ -42,16 +44,17 @@ private:
 		bool partial; // if true then req not fulfilled.
 		bool active;
 	};
-	std::array<MC_request*, Max_Calls> MC_requests;
+	std::map<int, MC_request*> MC_requests;
 	
 };
 
 Problem1::Problem1(Graph G) : MT_forest{}, MT_partial_forest{}, MC_requests{} {}
 Problem1::~Problem1() {
 	/* Write your code here. */
-	for(int i = 0; i < MC_requests.size(); i++)
+	std::map<int, MC_request*>::iterator it;
+	for(it = begin(MC_requests); it != end(MC_requests); it++)
 	{
-		delete MC_requests[i];
+		delete it->second;
 	}
 }
 Graph Problem1::constrained_graph(Graph const& og_g, int t)
@@ -99,6 +102,9 @@ void Problem1::update_edge_cost(Graph const& reduced_graph, bool included[], int
 		}
 	}
 }
+/*
+ The implementation is inspired of GFG's implementation found here: https://www.geeksforgeeks.org/prims-minimum-spanning-tree-mst-greedy-algo-5/
+*/
 void Problem1::prims_algo(Graph const& reduced_graph, Tree& m_tree)
 {
 	int source{m_tree.s - 1};
@@ -151,7 +157,10 @@ void Problem1::update_graph(Graph &G,Tree& m_tree, int t)
 void Problem1::insert(int id, int s, Set D, int t, Graph &G, Tree &MTid) {
 	/* Store your output graph and multicast tree into G and MTid */
 	std::cout << "-------------Start of insert-----------------" << std::endl;
-	MC_requests[id] = new MC_request{id, s, D, t, true, true}; //Init request as partial
+	if (MC_requests[id] != nullptr)
+	{
+		MC_requests[id] = new MC_request{id, s, D, t, true, true}; //Init request as partial
+	}
 	Tree m_tree{};
 	m_tree.s = s;
 	m_tree.V.push_back(s - 1);
