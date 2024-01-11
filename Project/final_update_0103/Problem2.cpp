@@ -5,19 +5,9 @@
 #include <limits.h>
 #include <vector>
 #include <stack>
-#include<bits/stdc++.h>
-#define Max_Calls 100000
+#include <bits/stdc++.h>
 /* You can add more functions or variables in each class. 
    But you "Shall Not" delete any functions or variables that TAs defined. */
-
-void print_graph(Graph const& G)
-{
-	std::cout << "Format From - To, available b, limit be, cost ce" << std::endl;
-	for (graphEdge const& gE : G.E)
-	{
-		std::cout << gE.vertex[0] << '-' << gE.vertex[1] << ", " << gE.b << ", " << gE.be << ", " << gE.ce << std::endl;
-	}
-}
 
 class Problem2 {
 public:
@@ -60,6 +50,10 @@ private:
 
 Problem2::Problem2(Graph G) : active_trees{}, MC_requests{}, g_sorted_edges{G} {
 	std::sort(begin(g_sorted_edges.E), end(g_sorted_edges.E), [](graphEdge const&lhs, graphEdge const&rhs){
+		if(lhs.ce == rhs.ce)
+		{
+			return lhs.b > rhs.b;
+		}
 		return lhs.ce < rhs.ce;
 	});
 }
@@ -140,14 +134,16 @@ bool Problem2::kruskals_algo(Graph_Ext& reduced_graph, Tree& m_tree)
 	std::vector<graphEdge*>::iterator it = std::begin(reduced_graph.parent_edges);
 	std::set<int> included_vertices{};
 	int t = MC_requests[m_tree.id]->t;
+	
 	while ((selected_edges.size() < V-1) && (it != std::end(reduced_graph.parent_edges)))
 	{
+
 		graphEdge curr = *(*it);
 		bool v_from{included_vertices.contains(curr.vertex[0])};
 		bool v_to{included_vertices.contains(curr.vertex[1])};
 
 		if (!v_from && !v_to)// Only else is needed, but this way could speed it uo since the is_cycle is a bit slow.
-		{			
+		{
 			selected_edges.push_back(*it);
 			m_tree.E.push_back(treeEdge{curr.vertex[0], curr.vertex[1]});
 			m_tree.ct = m_tree.ct + (t * (*it)->ce);
@@ -170,7 +166,7 @@ bool Problem2::kruskals_algo(Graph_Ext& reduced_graph, Tree& m_tree)
 			(*it)->b = (*it)->b - t;
 		}else{
 			if (!is_cycle(selected_edges, curr.vertex[0], curr.vertex[1]))
-			{
+			{			
 				selected_edges.push_back(*it);
 				m_tree.E.push_back(treeEdge{curr.vertex[0], curr.vertex[1]});
 				m_tree.ct = m_tree.ct + (t * (*it)->ce);
@@ -211,6 +207,7 @@ void Problem2::update_graph(Graph &G,Tree& m_tree, int t)
 
 bool Problem2::insert(int id, int s, Set D, int t, Graph &G, Tree &MTid) {
 	/* Store your output graph and multicast tree into G and MTid */
+	
 	if(MC_requests[id] == nullptr)
 	{
 		MC_requests[id] = new MC_request{id, s, D, t, true, true}; //Init request as noncomplete
@@ -219,6 +216,7 @@ bool Problem2::insert(int id, int s, Set D, int t, Graph &G, Tree &MTid) {
 	m_tree.s = s;
 	m_tree.V.push_back(s);
 	m_tree.id = id;
+	
 	if (std::find(std::begin(D.destinationVertices),std::end(D.destinationVertices), s) == (std::end(D.destinationVertices)))
 	{
 		D.destinationVertices.push_back(s);
@@ -227,14 +225,14 @@ bool Problem2::insert(int id, int s, Set D, int t, Graph &G, Tree &MTid) {
 	constrained_graph(g_sorted_edges, reduced_graph, t, D); //creates a graph that only contains the edges with enough bandwith and dest vertices
 	if(kruskals_algo(reduced_graph, m_tree)) //creates minimal spanning tree.
 	{
-		//update_graph(G, m_tree, t); //reduces the bandwith of the used edges.
 		MC_requests[id]->waiting = false;
 		active_trees.trees.push_back(m_tree);
 		active_trees.size++;
 		G = g_sorted_edges;
 		MTid = m_tree;
 		return true;
-	}
+	}	
+	
 	MTid = m_tree;
 	return false; 	/* You should return true or false according the insertion result */
 }
@@ -302,7 +300,6 @@ void Problem2::rearrange(Graph &G, Forest &MTidForest) {
 	}
 	active_trees.trees.clear();
 	active_trees.size = 0;
-	// Do insert from low to high, skip stopped.
 	map<int, MC_request*>::iterator it;
 	for (it = begin(MC_requests); it != end(MC_requests); it++)
 	{

@@ -6,15 +6,6 @@
 /* You can add more functions or variables in each class. 
    But you "Shall Not" delete any functions or variables that TAs defined. */
 
-void print_graph(Graph const& G)
-{
-	std::cout << "Format From - To, available b, limit be, cost ce" << std::endl;
-	for (graphEdge const& gE : G.E)
-	{
-		std::cout << gE.vertex[0] << '-' << gE.vertex[1] << ", " << gE.b << ", " << gE.be << ", " << gE.ce << std::endl;
-	}
-}
-
 class Problem1 {
 public:
 
@@ -244,7 +235,6 @@ void Problem1::update_p_trees(Graph &G, Forest &F)
 void Problem1::stop(int id, Graph &G, Forest &MTidForest) {
 	/* Store your output graph and multicast tree forest into G and MTidForest
 	   Note: Please "only" include mutlicast trees that you added nodes in MTidForest. */
-	std::cout << "stop"<<std::endl;
 	MC_requests[id]->active = false;
 	Tree curr_tree;
 	if(MC_requests[id]->partial)
@@ -271,7 +261,6 @@ void Problem1::stop(int id, Graph &G, Forest &MTidForest) {
 void Problem1::rearrange(Graph &G, Forest &MTidForest) {
 	/* Store your output graph and multicast tree forest into G and MTidForest
 	   Note: Please include "all" active mutlicast trees in MTidForest. */
-	// Stopp all - Free bandwith
 	for (Tree tree : MT_forest.trees)
 	{
 		if(MC_requests[tree.id]!=nullptr)
@@ -291,7 +280,6 @@ void Problem1::rearrange(Graph &G, Forest &MTidForest) {
 	MT_forest.size = 0;
 	MT_partial_forest.trees.clear();
 	MT_partial_forest.size = 0;
-	// Do insert from low to high, skip stopped.
 	std::map<int, MC_request*>::iterator it;
 	for(it = begin(MC_requests); it != end(MC_requests); it++)
 	{
