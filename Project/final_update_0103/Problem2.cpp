@@ -139,7 +139,7 @@ bool Problem2::kruskals_algo(Graph_Ext& reduced_graph, Tree& m_tree)
 	vector<graphEdge*> selected_edges{};
 	std::vector<graphEdge*>::iterator it = std::begin(reduced_graph.parent_edges);
 	std::set<int> included_vertices{};
-	int i = 0;
+	int t = MC_requests[m_tree.id]->t;
 	while ((selected_edges.size() < V-1) && (it != std::end(reduced_graph.parent_edges)))
 	{
 		graphEdge curr = *(*it);
@@ -150,40 +150,37 @@ bool Problem2::kruskals_algo(Graph_Ext& reduced_graph, Tree& m_tree)
 		{			
 			selected_edges.push_back(*it);
 			m_tree.E.push_back(treeEdge{curr.vertex[0], curr.vertex[1]});
+			m_tree.ct = m_tree.ct + (t * (*it)->ce);
 			included_vertices.insert(curr.vertex[0]);
 			included_vertices.insert(curr.vertex[1]);
-			(*it)->b = (*it)->b - MC_requests[m_tree.id]->t;
+			(*it)->b = (*it)->b - t;
 		}else if(v_from && !v_to)
 		{
 			selected_edges.push_back(*it);
 			m_tree.E.push_back(treeEdge{curr.vertex[0], curr.vertex[1]});
+			m_tree.ct = m_tree.ct + (t * (*it)->ce);
 			included_vertices.insert(curr.vertex[1]);
-			(*it)->b = (*it)->b - MC_requests[m_tree.id]->t;
+			(*it)->b = (*it)->b - t;
 		}else if(!v_from && v_to)
 		{
 			selected_edges.push_back(*it);
 			m_tree.E.push_back(treeEdge{curr.vertex[0], curr.vertex[1]});
+			m_tree.ct = m_tree.ct + (t * (*it)->ce);
 			included_vertices.insert(curr.vertex[0]);
-			(*it)->b = (*it)->b - MC_requests[m_tree.id]->t;
+			(*it)->b = (*it)->b - t;
 		}else{
 			if (!is_cycle(selected_edges, curr.vertex[0], curr.vertex[1]))
 			{
 				selected_edges.push_back(*it);
 				m_tree.E.push_back(treeEdge{curr.vertex[0], curr.vertex[1]});
-				(*it)->b = (*it)->b - MC_requests[m_tree.id]->t;
+				m_tree.ct = m_tree.ct + (t * (*it)->ce);
+				(*it)->b = (*it)->b - t;
 			}
 		}
 		it++;
 		
 
 	}
-	std::cout << "Selected edges, size then edges : " << m_tree.E.size() << std::endl;
-	for (graphEdge* gE : selected_edges)
-	{
-		std::cout << gE->vertex[0] << '-' << gE->vertex[1] << std::endl;
-	}
-	std::cout << "---------------------------------------------------" << std::endl;
-
 	if(m_tree.E.size() < (V - 1))
 	{
 		for (graphEdge* gE : selected_edges)
@@ -191,11 +188,9 @@ bool Problem2::kruskals_algo(Graph_Ext& reduced_graph, Tree& m_tree)
 			gE->b = gE->b + MC_requests[m_tree.id]->t;
 		}
 		m_tree.E.clear();
-		std::cout << "pop" << std::endl;
-		print_graph(g_sorted_edges);
+		m_tree.ct = 0;
 		return false;
 	}
-	print_graph(g_sorted_edges);
 	return true;
 }
 void Problem2::update_graph(Graph &G,Tree& m_tree, int t)
@@ -240,7 +235,7 @@ bool Problem2::insert(int id, int s, Set D, int t, Graph &G, Tree &MTid) {
 		MTid = m_tree;
 		return true;
 	}
-	;
+	MTid = m_tree;
 	return false; 	/* You should return true or false according the insertion result */
 }
 
@@ -287,7 +282,7 @@ void Problem2::stop(int id, Graph &G, Forest &MTidForest) {
 	}
 	MC_requests[id]->waiting = false;
 	G = g_sorted_edges;
-	print_graph(g_sorted_edges);
+	MTidForest.size = MTidForest.trees.size();
 	return;
 }
 
@@ -299,28 +294,26 @@ void Problem2::rearrange(Graph &G, Forest &MTidForest) {
 
 	for (Tree tree : active_trees.trees)
 	{
-		if(MC_requests[tree.id]->active)
+		if(MC_requests[tree.id]!= nullptr)
 		{
-			update_graph(G, tree, -(MC_requests[tree.id]->t));
+			update_graph(g_sorted_edges, tree, -(MC_requests[tree.id]->t));
 			MC_requests[tree.id]->waiting = true;
 		}
 	}
 	active_trees.trees.clear();
 	active_trees.size = 0;
 	// Do insert from low to high, skip stopped.
-	for(int i = 0; i < MC_requests.size(); i++)
+	map<int, MC_request*>::iterator it;
+	for (it = begin(MC_requests); it != end(MC_requests); it++)
 	{
-		if (MC_requests[i] != nullptr)
+		if (it->second != nullptr)
 		{
-			if (MC_requests[i]->active)
-			{
 				Tree t;
-				insert(MC_requests[i]->id, MC_requests[i]->s, MC_requests[i]->D, MC_requests[i]->t, G, t);
-				MTidForest.trees.push_back(t);
-				MTidForest.size++;
-			}
+				insert(it->second->id, it->second->s, it->second->D, it->second->t, g_sorted_edges, t);
 		}
 	}
+	G=g_sorted_edges;
+	MTidForest = active_trees;
 	return;
 }
 
