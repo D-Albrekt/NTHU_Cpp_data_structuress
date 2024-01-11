@@ -6,16 +6,6 @@
 /* You can add more functions or variables in each class. 
    But you "Shall Not" delete any functions or variables that TAs defined. */
 
-#define Max_Calls 100000 //Max fc calls 
-
-void print_graph(Graph const& G)
-{
-	std::cout << "Format From - To, available b, limit be, cost ce" << std::endl;
-	for (graphEdge const& gE : G.E)
-	{
-		std::cout << gE.vertex[0] << '-' << gE.vertex[1] << ", " << gE.b << ", " << gE.be << ", " << gE.ce << std::endl;
-	}
-}
 
 class Problem1 {
 public:
@@ -50,7 +40,6 @@ private:
 
 Problem1::Problem1(Graph G) : MT_forest{}, MT_partial_forest{}, MC_requests{} {}
 Problem1::~Problem1() {
-	/* Write your code here. */
 	std::map<int, MC_request*>::iterator it;
 	for(it = begin(MC_requests); it != end(MC_requests); it++)
 	{
@@ -156,8 +145,7 @@ void Problem1::update_graph(Graph &G,Tree& m_tree, int t)
 }
 void Problem1::insert(int id, int s, Set D, int t, Graph &G, Tree &MTid) {
 	/* Store your output graph and multicast tree into G and MTid */
-	std::cout << "-------------Start of insert-----------------" << std::endl;
-	if (MC_requests[id] != nullptr)
+	if (MC_requests[id] == nullptr)
 	{
 		MC_requests[id] = new MC_request{id, s, D, t, true, true}; //Init request as partial
 	}
@@ -180,7 +168,6 @@ void Problem1::insert(int id, int s, Set D, int t, Graph &G, Tree &MTid) {
 		MT_partial_forest.size++;
 	}
 	
-	std::cout << "Size of the " << id << ":s tree is " << m_tree.E.size() << " with the cost " << m_tree.ct << std::endl;
 	return;
 }
 
@@ -240,19 +227,15 @@ void Problem1::update_p_trees(Graph &G, Forest &F)
 		{
 			F.size++;
 			F.trees.push_back(mt);
-			std::cout << "Size of the " << mt.id << ":s tree is " << mt.E.size() << " Cost is: " << mt.ct << std::endl;
-
 		}
 
 
 	}
 }
 void Problem1::stop(int id, Graph &G, Forest &MTidForest) {
-	std::cout << "------------- Start of Stop ------------------" << std::endl;
 	/* Store your output graph and multicast tree forest into G and MTidForest
 	   Note: Please "only" include mutlicast trees that you added nodes in MTidForest. */
 
-	/* Write your code here. */
 	MC_requests[id]->active = false;
 	Tree curr_tree;
 	if(MC_requests[id]->partial)
@@ -270,21 +253,19 @@ void Problem1::stop(int id, Graph &G, Forest &MTidForest) {
 	int t = MC_requests[id]->t; //The transaction cost of deleting a casting tree is neg.
 	update_graph(G, curr_tree, -t); //The transaction cost of deleting a casting tree is neg.
 	update_p_trees(G, MTidForest);
+	delete MC_requests[id];
+	MC_requests.erase(id);
 	
 	return;
 }
 
 void Problem1::rearrange(Graph &G, Forest &MTidForest) {
-	std::cout << "_---------------- Start of Rearrange ------------------_" << std::endl;
 	/* Store your output graph and multicast tree forest into G and MTidForest
 	   Note: Please include "all" active mutlicast trees in MTidForest. */
-
-	/* Write your code here. */
 	// Stopp all - Free bandwith
-	print_graph(G);
 	for (Tree tree : MT_forest.trees)
 	{
-		if(MC_requests[tree.id]->active)
+		if(MC_requests[tree.id]!=nullptr)
 		{
 			update_graph(G, tree, -(MC_requests[tree.id]->t));
 			MC_requests[tree.id]->partial = true;
@@ -292,7 +273,7 @@ void Problem1::rearrange(Graph &G, Forest &MTidForest) {
 	}
 	for (Tree tree : MT_partial_forest.trees)
 	{
-		if(MC_requests[tree.id]->active)
+		if(MC_requests[tree.id]!= nullptr)
 		{
 			update_graph(G, tree, -(MC_requests[tree.id]->t));
 		}
@@ -301,19 +282,16 @@ void Problem1::rearrange(Graph &G, Forest &MTidForest) {
 	MT_forest.size = 0;
 	MT_partial_forest.trees.clear();
 	MT_partial_forest.size = 0;
-	print_graph(G);
 	// Do insert from low to high, skip stopped.
-	for(int i = 0; i < MC_requests.size(); i++)
+	std::map<int, MC_request*>::iterator it;
+	for(it = begin(MC_requests); it != end(MC_requests); it++)
 	{
-		if (MC_requests[i] != nullptr)
+		if (it->second != nullptr)
 		{
-			if (MC_requests[i]->active)
-			{
-				Tree t;
-				insert(MC_requests[i]->id, MC_requests[i]->s, MC_requests[i]->D, MC_requests[i]->t, G, t);
-				MTidForest.trees.push_back(t);
-				MTidForest.size++;
-			}
+			Tree t;
+			insert(it->second->id, it->second->s, it->second->D, it->second->t, G, t);
+			MTidForest.trees.push_back(t);
+			MTidForest.size++;
 		}
 	}
 	return;
