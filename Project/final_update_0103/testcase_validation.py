@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+ID_MAX = 2 ** 31 - 1
+
 import re
 
 def validate_graph_definition(lines):
@@ -8,7 +10,7 @@ def validate_graph_definition(lines):
     return False, "First line must contain two integers (|V| and |E|).", None
 
   V, E = int(vertex_edge_match.group(1)), int(vertex_edge_match.group(2))
-  if not (1 <= V <= 100 and (V - 1) <= E <= V * (V - 1)):
+  if not (1 <= V <= 100 and (V - 1) <= E <= V * (V - 1) / 2):
     return False, "|V| and |E| are out of the allowed range.", None
 
   edges_seen = set()
@@ -41,8 +43,8 @@ def validate_function_calls(lines, vertices, file_name):
   rearrange_pattern = re.compile(r'^rearrange$')
 
   function_count = 0
-  last_insert_id = 0
   active_inserts = set()
+  all_inserts = set()
   valid_insert_generated = False  # Track if a valid insert call has been encountered
 
   for line in lines:
@@ -51,18 +53,24 @@ def validate_function_calls(lines, vertices, file_name):
     if match := insert_pattern.match(line):
       id, s, D, _ = match.groups()
       id, s = int(id), int(s)
-      if id <= last_insert_id:
-        return False, "Insert IDs are not in increasing order."
-      last_insert_id = id
+      if id in all_inserts:
+        return False, "Duplicated insert IDs"
+      
+      if id <= 0 or id > ID_MAX:
+        return False, "Insert ID out of range"
 
       D_vertices = set(map(int, D.split()))
-      if s not in vertices or not D_vertices.issubset(vertices) or s not in D_vertices:
-        return False, f"Invalid vertices ({line}) in insert function."
+      if s not in vertices:
+        return False, f"Invalid insert function ({line}), source not in V."
+
+      if not D_vertices.issubset(vertices):
+        return False, f"Invalid insert function ({line}), D not a subset of V."
 
       if file_name == 'Problem1_test_case.txt' and D_vertices != vertices:
         return False, "In Problem 1, D must contain all vertices in V."
 
       active_inserts.add(id)
+      all_inserts.add(id)
       valid_insert_generated = True
 
     elif match := stop_pattern.match(line):
